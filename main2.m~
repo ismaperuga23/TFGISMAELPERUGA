@@ -7,7 +7,7 @@ K = 2; % Number of users per BS
 antennasPerUser = 2;
 Radius = 500; % Radius of the cells (in m)
 nrBS = 7; % Number of BS
-
+beamform = 1; % if beamform = 0, w = [1; 1;]
 % generate users (SystemPlot)
 % generate one tier (7 BS) with one user per BS. The radius of the BS is
 % 500 m
@@ -45,20 +45,51 @@ for n = 1:K*nrBS % for each user, one Ru
 
     Ru(:,:,n) = functionOneRingModel(antennasPerUser,angularSpread,theta);
     [eigenVect(:,:,n),eigenVal(:,:,n)] = eig(Ru(:,:,n));
-    maxVect(:,n) = eigenVect(:,end,n);
+    w(:,n) = eigenVect(:,end,n);
 end
 
 %%
 count = 0;
+a = 0;
 for n=1:nrBS*K*nrBS
     for i=1:antennasPerUser
-        
-        %g(:,:,antennasPerUser*(n-1)+i) = sqrt(R(:,:,n))*h(:,:,antennasPerUser*(n-1)+i)*sqrt(Ru(:,:,i));
+        user = mod(n,K*nrBS);
+        if user == 0
+            user = 14;
+        end
+        g(:,:,antennasPerUser*(n-1)+i) = sqrt(R(:,:,n))*h(:,:,antennasPerUser*(n-1)+i)*sqrt(Ru(:,:,user)); 
     end
-    if(mod(n,K*nrBS+1) == 1)
-       count = count +1 
-    end
+    
 end
+
+%% creating Rkk for each user Rkk = R*trace(Ru^(1/2)*w*w^(H)*Ru^(1/2)^H)
+% u = 1;
+% for t = 1:nrBS
+%     for a = 1:K
+%         Rk_ = sqrt(Ru(:,:,u))*w(:,u)*ctranspose(w(:,u))*sqrt(ctranspose(Ru(:,:,u)));
+%         Rkk(:,:,u) =  R(:,:,(t-1)*K*nrBS+(t-1)*K+a)*trace(Rk_);
+%         u = u+1;
+%     end
+%     
+% end
+
+for u = 1:nrBS*K
+    
+    for t = 1:nrBS
+        Rk_(:,:,u) = sqrt(Ru(:,:,u))*w(:,u)*ctranspose(w(:,u))*sqrt(ctranspose(Ru(:,:,u)));
+    
+        Rkk(:,:,(t-1)*K*nrBS + u) = R(:,:,(t-1)*K*nrBS + u)*trace(Rk_(:,:,u));
+    end
+    
+end
+
+% THIS IS THE SAME AS DE LAST CODE ABOVE
+
+% for t = 1:nrBS
+%         Rk_ = sqrt(Ru(:,:,u))*w(:,u)*ctranspose(w(:,u))*sqrt(ctranspose(Ru(:,:,u)));
+%     
+%         Rkk2(:,:,(t-1)*K*nrBS + 1:(t-1)*K*nrBS + nrBS*K) = R(:,:,(t-1)*K*nrBS + 1:(t-1)*K*nrBS + nrBS*K)*trace(Rk_);
+%  end
 
 
 %%
@@ -88,18 +119,21 @@ for m=1:realizations
 
         for t=1:nrBS % for each BS, calculate the MMSE estimator of the channel
 
-            Rsum = sum(R(:,:,(t-1)*K*nrBS+1:(t-1)*K*nrBS+nrBS*K),3);
+            Rsum = sum(Rkk(:,:,(t-1)*K*nrBS+1:(t-1)*K*nrBS+nrBS*K),3);
             
             % ATENTO AL 1 ANTES DE LA r Y DESPUES DE LA m!!
+            % index = (t-1)*K*nrBS+K*(t-1)+a
             for a=1:K
                 GMMSE(t,:,r,a,m) = received(t,:,r,m)*R(:,:,(t-1)*K*nrBS+(t-1)*K+a)*inv(p(r)*Rsum + eye(M));
+                C(:,:,t,a) = Rkk(:,:,(t-1)*K*nrBS+K*(t-1)+a) - p(r)*R(:,:,(t-1)*K*nrBS+K*(t-1)+a)*inv(p(r)*Rsum + eye(M))*Rkk(:,:,(t-1)*K*nrBS+K*(t-1)+a);
+                MSE(t,r,a) = trace(C(:,:,t,a));
             end
            
-            MSEH(t,r,m) = immse(GMMSE(t,:,r,1,m),h((t-1)*K*nrBS+t,:));
+            %MSEH(t,r,m) = immse(GMMSE(t,:,r,1,m),h((t-1)*K*nrBS+t,:));
                         
-            C(:,:,t) = R(:,:,(t-1)*K*nrBS+t) - p(r)*R(:,:,(t-1)*K*nrBS+t)*inv(p(r)*Rsum + eye(M))*R(:,:,(t-1)*K*nrBS+t);
+            %C(:,:,t) = R(:,:,(t-1)*K*nrBS+t) - p(r)*R(:,:,(t-1)*K*nrBS+t)*inv(p(r)*Rsum + eye(M))*R(:,:,(t-1)*K*nrBS+t);
             
-            MSE(t,r) = trace(C(:,:,t));
+            
         
         end
 
@@ -110,26 +144,13 @@ end
 %MSEHmean = mean(MSEH,3);
 %MSEHmean = mean(MSEH,3);
 %%
-figure;
-plot(abs(MSE(1,:)));
+for t=1:nrBS
+    for u=1:2
+        plotMSE(MSE,t,u);
+    end
+end
 
-figure;
-plot(abs(MSE(2,:)));
 
-figure;
-plot(abs(MSE(3,:)));
-
-figure;
-plot(abs(MSE(4,:)));
-
-figure;
-plot(abs(MSE(5,:)));
-
-figure;
-plot(abs(MSE(6,:)));
-
-figure;
-plot(abs(MSE(7,:)));
 
 %% 
 figure;
