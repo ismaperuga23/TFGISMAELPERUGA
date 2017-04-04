@@ -88,7 +88,7 @@ for m=1:realizations
 end
 %MSEGmean = mean(MSEG,3);
 %MSEHmean = mean(MSEH,3);
-MSEHmean = mean(MSEH,3);
+%MSEHmean = mean(MSEH,3);
 %%
 figure;
 plot(abs(MSE(1,:)));
@@ -113,24 +113,24 @@ plot(abs(MSE(7,:)));
 
 %% 
 figure;
-plot(MSEHmean(1,:))
+plot(MSEH(1,:))
 
 figure;
-plot(MSEHmean(2,:))
+plot(MSEH(2,:))
 figure;
-plot(MSEHmean(3,:))
+plot(MSEH(3,:))
 
 figure;
-plot(MSEHmean(4,:))
+plot(MSEH(4,:))
 
 figure;
-plot(MSEHmean(5,:))
+plot(MSEH(5,:))
 
 figure;
-plot(MSEHmean(6,:))
+plot(MSEH(6,:))
 
 figure;
-plot(MSEHmean(7,:))
+plot(MSEH(7,:))
 %%
 figure;
 hold on
