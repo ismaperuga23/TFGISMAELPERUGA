@@ -4,10 +4,10 @@ clear all
 
 M = 100; % number of antennas at the BS
 K = 2; % Number of users per BS
-antennasPerUser = 2;
+N = 2; % Number of antennas per User
 Radius = 500; % Radius of the cells (in m)
 nrBS = 7; % Number of BS
-beamform = 0; % if beamform = 0, w = [1; 1;], i.e., there is no beamforming at the user
+beamform = 1; % if beamform = 0, w = [1; 1;], i.e., there is no beamforming at the user
 % generate users (SystemPlot)
 % generate one tier (7 BS) with one user per BS. The radius of the BS is
 % 500 m
@@ -21,14 +21,14 @@ betas = 1./(Distances.^(3.8)); % loss factor
 % 1st matrix in h, BS1 vs UE1 antenna 1 and 2
 % 2nd matrix in h, BS1 vs UE2 antenna 1 and 2 ...
 for i=1:nrBS*K*nrBS
-    h(:,:,i) = (sqrt(2)./2)*(randn(M,antennasPerUser)+1i*randn(M,antennasPerUser));
+    h(:,:,i) = (sqrt(2)./2)*(randn(M,N)+1i*randn(M,N));
 end
 
 % for each h calculate the covariance matrix (each h is one antenna from
 % the user to eacH BS)
 angularSpread = 10; % 10�
-R = zeros(M,M,nrBS*K*antennasPerUser*nrBS/antennasPerUser);
-for n=1:nrBS*K*antennasPerUser*nrBS/antennasPerUser
+R = zeros(M,M,nrBS*K*N*nrBS/N);
+for n=1:nrBS*K*N*nrBS/N
     theta = rand*pi; % angle of arrival (uniformly distributed between 0 and pi)
     R(:,:,n) = functionOneRingModel(M,angularSpread,theta);
     % generate the g's
@@ -42,11 +42,11 @@ end
 for n = 1:K*nrBS % for each user, one Ru
     theta = rand.*pi;
 
-    Ru(:,:,n) = functionOneRingModel(antennasPerUser,angularSpread,theta);
+    Ru(:,:,n) = functionOneRingModel(N,angularSpread,theta);
     [eigenVect(:,:,n),eigenVal(:,:,n)] = eig(Ru(:,:,n));
     w(:,n) = eigenVect(:,end,n);
     if beamform == 0
-        w(:,n) = ones(antennasPerUser,1);
+        w(:,n) = ones(N,1);
     end
 end
 
@@ -55,7 +55,7 @@ count = 0;
 a = 0;
 for n=1:nrBS*K*nrBS
     
-    for i=1:antennasPerUser
+    for i=1:N
         user = mod(n,K*nrBS);
         if user == 0
             user = 14;
@@ -109,7 +109,7 @@ p = linspace(1,Radius^(1.8),500);
 realizations = 1;
 for m=1:realizations
     for r=1:length(p) % I'm using the same system for all the different SNR, is it correct?
-        received(:,:,r,m) = receivedSignal2(p(r),nrBS,K,M,1,g,antennasPerUser,betas);
+        received(:,:,r,m) = receivedSignal2(p(r),nrBS,K,M,1,g,N,betas);
     end
 end
 %%

@@ -1,4 +1,4 @@
-function y = receivedSignal(p,nrBS,K,M,noisePower,g,antennasPerUser,betas)
+function y = receivedSignal(p,nrBS,K,M,noisePower,g,N,betas)
     % p: power of the pilot
     % nrBS: number of BS
     % K: Users per BS
