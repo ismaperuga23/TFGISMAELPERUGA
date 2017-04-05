@@ -18,11 +18,10 @@ betas = 1./(Distances.^(3.8)); % loss factor
 % per user) 98 h (each user in the system, 7, vs each BS, 7, and every user
 % has 2 antennas, 7*K*2)
 
-% 1st row in h, BS1 vs UE1,1st antenna
-% 2nd row in h, BS1 vs UE1,2nd antenna
-% 3rd row in h, BS1 vs UE2,1st antenna...
-for i=1:nrBS*antennasPerUser*nrBS*K
-    h(:,:,i) = (sqrt(2)./2)*(randn(M,K)+1i*randn(M,K));
+% 1st matrix in h, BS1 vs UE1 antenna 1 and 2
+% 2nd matrix in h, BS1 vs UE2 antenna 1 and 2 ...
+for i=1:nrBS*K*nrBS
+    h(:,:,i) = (sqrt(2)./2)*(randn(M,antennasPerUser)+1i*randn(M,antennasPerUser));
 end
 
 % for each h calculate the covariance matrix (each h is one antenna from
@@ -55,12 +54,13 @@ end
 count = 0;
 a = 0;
 for n=1:nrBS*K*nrBS
+    
     for i=1:antennasPerUser
         user = mod(n,K*nrBS);
         if user == 0
             user = 14;
         end
-        g(:,:,antennasPerUser*(n-1)+i) = sqrt(R(:,:,n))*h(:,:,antennasPerUser*(n-1)+i)*sqrt(Ru(:,:,user)); 
+        g(:,:,n) = sqrt(R(:,:,n))*h(:,:,n)*sqrt(Ru(:,:,user)); 
     end
     
 end
@@ -76,12 +76,14 @@ end
 %     
 % end
 
-for u = 1:nrBS*K
+for u = 1:nrBS*K % For all the users
     
-    for t = 1:nrBS
-        Rk_(:,:,u) = sqrt(Ru(:,:,u))*w(:,u)*ctranspose(w(:,u))*sqrt(ctranspose(Ru(:,:,u)));
-    
+    Rk_(:,:,u) = sqrt(Ru(:,:,u))*w(:,u)*ctranspose(w(:,u))*sqrt(ctranspose(Ru(:,:,u)));
+ 
+    for t = 1:nrBS % For all users vs all BS
+        
         Rkk(:,:,(t-1)*K*nrBS + u) = R(:,:,(t-1)*K*nrBS + u)*trace(Rk_(:,:,u));
+       
     end
     
 end
@@ -128,7 +130,7 @@ for m=1:realizations
             % index = (t-1)*K*nrBS+K*(t-1)+a
             for a=1:K
                 GMMSE(t,:,r,a,m) = received(t,:,r,m)*R(:,:,(t-1)*K*nrBS+(t-1)*K+a)*inv(p(r)*Rsum + eye(M));
-                C(:,:,t,a) = Rkk(:,:,(t-1)*K*nrBS+K*(t-1)+a) - p(r)*R(:,:,(t-1)*K*nrBS+K*(t-1)+a)*inv(p(r)*Rsum + eye(M))*Rkk(:,:,(t-1)*K*nrBS+K*(t-1)+a);
+                C(:,:,t,a) = Rkk(:,:,(t-1)*K*nrBS+K*(t-1)+a) - p(r)*Rkk(:,:,(t-1)*K*nrBS+K*(t-1)+a)*inv(p(r)*Rsum + eye(M))*Rkk(:,:,(t-1)*K*nrBS+K*(t-1)+a);
                 MSE(t,r,a) = trace(C(:,:,t,a));
             end
            
@@ -152,7 +154,9 @@ for t=1:nrBS
         plotMSE(MSE,t,u);
     end
 end
-
+%%
+figure;
+plot(abs(MSE(5,:,2)));
 
 
 %% 

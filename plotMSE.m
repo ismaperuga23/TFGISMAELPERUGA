@@ -5,7 +5,7 @@ function plotMSE(MSE,BS,user)
 % user: The user in the BS
 
 figure;
-plot(MSE(BS,:,user));
+plot(abs(MSE(BS,:,user)));
 
 
 end
