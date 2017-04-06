@@ -2,13 +2,14 @@ count = 0;
 a = 0;
 for n=1:nrBS*K*nrBS
     
-    
-    user = mod(n,K*nrBS);
-    if user == 0
-        user = K*nrBS;
+    for i=1:N
+        user = mod(n,K*nrBS);
+        if user == 0
+            user = K*nrBS;
+        end
+      
+        g(:,:,n) = sqrt(R(:,:,n))*h(:,:,n)*sqrt(Ru(:,:,user)); 
     end
-    g(:,:,n) = sqrt(R(:,:,n))*h(:,:,n)*sqrt(Ru(:,:,user)); 
-    
     
 end
 

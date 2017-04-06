@@ -1,13 +1,12 @@
 %% main 2, more than one user per cell
-%% main
 clear all
 
 M = 100; % number of antennas at the BS
-K = 2; % Number of users per BS
-N = 2; % Number of antennas per User
+K = 1; % Number of users per BS
+N = 10; % Number of antennas per User
 Radius = 500; % Radius of the cells (in m)
 nrBS = 7; % Number of BS
-beamform = 1; % if beamform = 0, w = [1; 1;], i.e., there is no beamforming at the user
+beamform = 0; % if beamform = 0, w = [1; 1;], i.e., there is no beamforming at the user
 % generate users (SystemPlot)
 % generate one tier (7 BS) with one user per BS. The radius of the BS is
 % 500 m
@@ -20,6 +19,7 @@ betas = 1./(Distances.^(3.8)); % loss factor
 
 % 1st matrix in h, BS1 vs UE1 antenna 1 and 2
 % 2nd matrix in h, BS1 vs UE2 antenna 1 and 2 ...
+
 for i=1:nrBS*K*nrBS
     h(:,:,i) = (sqrt(2)./2)*(randn(M,N)+1i*randn(M,N));
 end
@@ -55,13 +55,13 @@ count = 0;
 a = 0;
 for n=1:nrBS*K*nrBS
     
-    for i=1:N
-        user = mod(n,K*nrBS);
-        if user == 0
-            user = 14;
-        end
-        g(:,:,n) = sqrt(R(:,:,n))*h(:,:,n)*sqrt(Ru(:,:,user)); 
+    
+    user = mod(n,K*nrBS);
+    if user == 0
+        user = K*nrBS;
     end
+    g(:,:,n) = sqrt(R(:,:,n))*h(:,:,n)*sqrt(Ru(:,:,user)); 
+    
     
 end
 
@@ -131,7 +131,11 @@ for m=1:realizations
             for a=1:K
                 GMMSE(t,:,r,a,m) = received(t,:,r,m)*R(:,:,(t-1)*K*nrBS+(t-1)*K+a)*inv(p(r)*Rsum + eye(M));
                 C(:,:,t,a) = Rkk(:,:,(t-1)*K*nrBS+K*(t-1)+a) - p(r)*Rkk(:,:,(t-1)*K*nrBS+K*(t-1)+a)*inv(p(r)*Rsum + eye(M))*Rkk(:,:,(t-1)*K*nrBS+K*(t-1)+a);
-                MSE(t,r,a) = trace(C(:,:,t,a));
+                gEff(:,(t-1)*K+a,r) = h(:,:,(t-1)*K*nrBS+K*(t-1)+a)*w(:,(t-1)*K+a);
+%                 gEff2 = gEff(:,(t-1)*K+a,r);
+%                 normFactor = ctranspose(gEff2)*gEff2;
+                normFactor = trace(Rkk(:,:,(t-1)*K*nrBS+K*(t-1)+a));
+                MSE(t,r,a) = trace(C(:,:,t,a))/normFactor;
             end
            
             %MSEH(t,r,m) = immse(GMMSE(t,:,r,1,m),h((t-1)*K*nrBS+t,:));
@@ -150,8 +154,8 @@ end
 %MSEHmean = mean(MSEH,3);
 %%
 for t=1:nrBS
-    for u=1:2
-        plotMSE(MSE,t,u);
+    for u=1:K
+        plotMSE(MSE,t,u,p);
     end
 end
 %%
