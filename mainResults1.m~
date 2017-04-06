@@ -6,7 +6,7 @@
 
 clear all
 
-Nrealizations = 5;
+Nrealizations = 125;
 Nmax = 10; % Maximum number of antennas per terminal in the simulation
 SNR = 5; % value of the fixed SNR in dB (power of noise = 1)
 
@@ -15,10 +15,10 @@ p = 10^(SNR/10); % power of the pilots for the desired SNR
 M = 100; % number of antennas at the BS
 K = 1; % Number of users per BS
 %N = [1:2:Nmax]; % Number of antennas per User
-N = [1 4];
+N = [1 2 4 8 16 32];
 Radius = 500; % Radius of the cells (in m)
 nrBS = 7; % Number of BS
-beamform = 0; % if beamform = 0, w = [1; 1;], i.e., there is no beamforming at the user
+beamform = 1; % if beamform = 0, w = [1; 1;], i.e., there is no beamforming at the user
 % generate users (SystemPlot)
 % generate one tier (7 BS) with one user per BS. The radius of the BS is
 % 500 m
@@ -37,30 +37,20 @@ for na = 1:length(N)% For all the different values of antennas at the user
     Rk_ = zeros(N(na),N(na),K*nrBS,Nrealizations);
     Rkk = zeros(M,M,K*nrBS,Nrealizations);
     gEff = zeros(M,K,Nrealizations);
-    
+    R = zeros(M,M,nrBS*K*nrBS,Nrealizations);
     
     for r = 1:Nrealizations
 
         % generate the channel realizations
         % 1st matrix in h, BS1 vs UE1 antenna 1 and 2
         % 2nd matrix in h, BS1 vs UE2 antenna 1 and 2 ...
-        for i=1:nrBS*K*nrBS
-            h(:,:,i,r) = (sqrt(2)./2)*(randn(M,N(na))+1i*randn(M,N(na)));
-        end
-
         % for each h calculate the covariance matrix (each h is one antenna from
         % the user to eacH BS)
         angularSpread = 10; % 10�
-        R = zeros(M,M,nrBS*K*N(na)*nrBS/N(na),Nrealizations);
-        for n=1:nrBS*K*N(na)*nrBS/N(na)
+        for i=1:nrBS*K*nrBS
+            h(:,:,i,r) = (sqrt(2)./2)*(randn(M,N(na))+1i*randn(M,N(na)));
             theta = rand*pi; % angle of arrival (uniformly distributed between 0 and pi)
-            R(:,:,n,r) = functionOneRingModel(M,angularSpread,theta);
-            % generate the g's
-        %     for i=1:antennasPerUser
-        %         g(:,:,antennasPerUser*(n-1)+i) = sqrt(R(:,:,n))*h(:,:,antennasPerUser*(n-1)+i);
-        %     end
-
-
+            R(:,:,i,r) = functionOneRingModel(M,angularSpread,theta);
         end
 
         % Obtaining the beamforming vector
@@ -73,37 +63,37 @@ for na = 1:length(N)% For all the different values of antennas at the user
             if beamform == 0
                 w(:,n,r) = ones(N(na),1);
             end
-        end
-
-        % generating the g's
-        count = 0;
-        a = 0;
-        for n=1:nrBS*K*nrBS
-
-
-            user = mod(n,K*nrBS);
-            if user == 0
-                user = K*nrBS;
-            end
-            g(:,:,n,r) = sqrt(R(:,:,n,r))*h(:,:,n,r)*sqrt(Ru(:,:,user,r)); 
-
-
-        end
-
-        % creating Rkk for each user Rkk = R*trace(Ru^(1/2)*w*w^(H)*Ru^(1/2)^H)
-        for u = 1:nrBS*K % For all the users
             
-            if na == 2
-                a = 1; 
-            end
+            % creating Rkk for each user Rkk = R*trace(Ru^(1/2)*w*w^(H)*Ru^(1/2)^H)
 
-            Rk_(:,:,u,r) = sqrt(Ru(:,:,u,r))*w(:,u,r)*ctranspose(w(:,u,r))*sqrt(ctranspose(Ru(:,:,u,r)));
+            Rk_(:,:,n,r) = sqrt(Ru(:,:,n,r))*w(:,n,r)*ctranspose(w(:,n,r))*sqrt(ctranspose(Ru(:,:,u,r)));
 
             for t = 1:nrBS % For all users vs all BS
 
                 Rkk(:,:,(t-1)*K*nrBS + u,r) = R(:,:,(t-1)*K*nrBS + u,r)*trace(Rk_(:,:,u,r));
 
             end
+            
+        end
+
+        % generating the g's
+%         count = 0;
+%         a = 0;
+%         for n=1:nrBS*K*nrBS
+% 
+% 
+%             user = mod(n,K*nrBS);
+%             if user == 0
+%                 user = K*nrBS;
+%             end
+%             g(:,:,n,r) = sqrt(R(:,:,n,r))*h(:,:,n,r)*sqrt(Ru(:,:,user,r)); 
+% 
+% 
+%         end
+
+        for u = 1:nrBS*K % For all the users
+            
+            
 
         end
         
@@ -117,7 +107,7 @@ for na = 1:length(N)% For all the different values of antennas at the user
             % index = (t-1)*K*nrBS+K*(t-1)+a
             for a=1:K
                 C(:,:,t,a,r) = Rkk(:,:,(t-1)*K*nrBS+K*(t-1)+a,r) - p*Rkk(:,:,(t-1)*K*nrBS+K*(t-1)+a,r)*inv(p*Rsum + eye(M))*Rkk(:,:,(t-1)*K*nrBS+K*(t-1)+a,r);
-                gEff(:,(t-1)*K+a,r) = h(:,:,(t-1)*K*nrBS+K*(t-1)+a,r)*w(:,(t-1)*K+a,r);
+                %gEff(:,(t-1)*K+a,r) = h(:,:,(t-1)*K*nrBS+K*(t-1)+a,r)*w(:,(t-1)*K+a,r);
                 normFactor = trace(Rkk(:,:,(t-1)*K*nrBS+K*(t-1)+a,r));
                 MSE(t,r,a) = trace(C(:,:,t,a,r))/normFactor;
             end
@@ -135,6 +125,15 @@ for na = 1:length(N)% For all the different values of antennas at the user
     end
     
 end
+
+%% Plotting the results
+for t = 1:nrBS
+    for a = 1:K % for each user in the cell
+        plotMeanMSE(meanMSE,t,a,N) 
+    end
+end
+
+ 
 
 %% creating Rkk for each user Rkk = R*trace(Ru^(1/2)*w*w^(H)*Ru^(1/2)^H)
 % u = 1;
