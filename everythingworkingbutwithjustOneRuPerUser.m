@@ -1,3 +1,21 @@
+Skip to content
+This repository
+Search
+Pull requests
+Issues
+Gist
+ @ismaperuga23
+ Sign out
+ Unwatch 1
+  Star 0
+  Fork 0 ismaperuga23/BACHTHESIS
+ Code  Issues 0  Pull requests 0  Projects 0  Wiki  Pulse  Graphs  Settings
+Branch: master Find file Copy pathBACHTHESIS/mainResults2.m
+249c24c  6 hours ago
+@ismaperuga23 ismaperuga23 Ru have to be fixed
+1 contributor
+RawBlameHistory    
+128 lines (97 sloc)  4.99 KB
 %% main results
 %% With one user per cell (no intercell interference since the users in the
 % same cell will use orthogonal pilots). We will see the difference between
@@ -5,7 +23,7 @@
 
 clear all
 
-Nrealizations = 1;
+Nrealizations = 200;
 Nmax = 10; % Maximum number of antennas per terminal in the simulation
 SNR = 5; % value of the fixed SNR in dB (power of noise = 1)
 
@@ -14,7 +32,7 @@ p = 10^(SNR/10); % power of the pilots for the desired SNR
 M = 100; % number of antennas at the BS
 K = 1; % Number of users per BS
 %N = [1:2:Nmax]; % Number of antennas per User
-N = [4 10 20 1000];
+N = [1 4 10 20];
 Radius = 500; % Radius of the cells (in m)
 nrBS = 7; % Number of BS
 beamform = 1; % if beamform = 0, w = [1; 1;], i.e., there is no beamforming at the user
@@ -34,56 +52,19 @@ end
 meanMSEb = zeros(nrBS,length(N));
 meanMSEnb = zeros(nrBS,length(N));
 for na = 1:length(N)% For all the different values of antennas at the user
-    wb = zeros(N(na),K*nrBS);
-    wnb = zeros(N(na),K*nrBS);
-    Ru = zeros(N(na),N(na),nrBS*K*nrBS);
-    eigenVect = zeros(N(na),N(na),K*nrBS*nrBS);
-    eigenVal = zeros(N(na),N(na),K*nrBS*nrBS);
-    Rk_b = zeros(N(na),N(na),K*nrBS);
-    Rk_nb = zeros(N(na),N(na),K*nrBS);
-    Rkkb = zeros(M,M,K*nrBS*nrBS);
-    Rkknb = zeros(M,M,K*nrBS*nrBS);
+    h = zeros(M,N(na),nrBS*K*nrBS,Nrealizations);
+    g = zeros(M,N(na),nrBS*K*nrBS,Nrealizations);
+    wb = zeros(N(na),K*nrBS,Nrealizations);
+    wnb = zeros(N(na),K*nrBS,Nrealizations);
+    Ru = zeros(N(na),N(na),Nrealizations);
+    eigenVect = zeros(N(na),N(na),K*nrBS,Nrealizations);
+    eigenVal = zeros(N(na),N(na),K*nrBS,Nrealizations);
+    Rk_b = zeros(N(na),N(na),K*nrBS,Nrealizations);
+    Rk_nb = zeros(N(na),N(na),K*nrBS,Nrealizations);
+    Rkkb = zeros(M,M,K*nrBS,Nrealizations);
+    Rkknb = zeros(M,M,K*nrBS,Nrealizations);
     gEff = zeros(M,K,Nrealizations);
-    
-    Rusqrt = zeros(N(na),N(na),nrBS*K*nrBS);
     %R = zeros(M,M,nrBS*K*nrBS,Nrealizations);
-    
-    for i = 1:nrBS*K*nrBS % Each user has different Ru for each BS
-        theta = rand*pi; % angle of arrival (uniformly distributed between 0 and pi)
-        Ru(:,:,i) = functionOneRingModel(N(na),angularSpread,theta);
-        
-        [V,D] = eig(Ru(:,:,i));
-        
-        Rusqrt(:,:,i) = V*sqrt(D)*ctranspose(V);
-        
-        
-        
-    end
-    
-    for n = 1:nrBS
-        
-        for a = 1:K
-            [eigenVect(:,:,(n-1)*K+a),eigenVal(:,:,(n-1)*K+a)] = eig(Ru(:,:,(n-1)*K*nrBS+(n-1)*K + a));
-            wb(:,(n-1)*K+a) = eigenVect(:,end,(n-1)*K+a);
-            wnb(:,(n-1)*K+a) = ones(N(na),1)/sqrt(N(na)); % without beamforming
-        end
-        
-    end
-    
-    
-    for t = 1:nrBS
-        
-        for u=1:nrBS*K
-            
-            Rk_b(:,:,(t-1)*K*nrBS+u) = Rusqrt(:,:,(t-1)*K*nrBS+u)*wb(:,u)*ctranspose(wb(:,u))*ctranspose(Rusqrt(:,:,(t-1)*K*nrBS+u));
-            Rk_nb(:,:,(t-1)*K*nrBS+u) = Rusqrt(:,:,(t-1)*K*nrBS+u)*wnb(:,u)*ctranspose(wnb(:,u))*ctranspose(Rusqrt(:,:,(t-1)*K*nrBS+u));
-            
-            Rkkb(:,:,(t-1)*K*nrBS+u) = R(:,:,(t-1)*K*nrBS+u)*trace(Rk_b(:,:,(t-1)*K*nrBS+u));
-            Rkknb(:,:,(t-1)*K*nrBS+u) = R(:,:,(t-1)*K*nrBS+u)*trace(Rk_nb(:,:,(t-1)*K*nrBS+u));
-            
-        end
-        
-    end
     
     for r = 1:Nrealizations
 
@@ -94,39 +75,34 @@ for na = 1:length(N)% For all the different values of antennas at the user
         % the user to eacH BS)
       
 
-%         % Obtaining the beamforming vector
-%         for n = 1:nrBS 
-%             theta = rand.*pi;
-%             for a = 1:K
-%                 %Ru(:,:,n,r) = functionOneRingModel(N(na),angularSpread,theta);
-%                 [eigenVect(:,:,(n-1)*K+a,r),eigenVal(:,:,(n-1)*K+a,r)] = eig(Ru(:,:,(n-1)*K+a));
-%                 wb(:,(n-1)*k+a,r) = eigenVect(:,end,(n-1)*k+a,r); % Beamforming vector
-% 
-%                 wnb(:,(n-1)*k+a,r) = ones(N(na),1)/sqrt(N(na)); % without Beamforming
-% 
-% 
-%                 % creating Rkk for each user Rkk = R*trace(Ru^(1/2)*w*w^(H)*Ru^(1/2)^H)
-% 
-%                 Rusq = eigenVect(:,:,(n-1)*K+a,r)*sqrt(eigenVal(:,:,(n-1)*K+a,r))*ctranspose(eigenVect(:,:,(n-1)*K+a,r));% square root of Ru
-% 
-% 
-%                 Rk_b(:,:,(n-1)*K+a,r) = Rusq*wb(:,(n-1)*K+a,r)*ctranspose(wb(:,(n-1)*K+a,r))*ctranspose(Rusq);
-%                 Rk_nb(:,:,(n-1)*K+a,r) = Rusq*wnb(:,(n-1)*K+a,r)*ctranspose(wnb(:,(n-1)*K+a,r))*ctranspose(Rusq);
-%                 
-%                 Rkkb(:,:,(n-1)*K*nrBS+(n-1)*K + a) = R(:,:,(n-1)*K*nrBS+(n-1)*K + a)*trace(Rk_b(:,:,(n-1)*K+a,r));
-%                 Rkknb(:,:,(n-1)*K*nrBS+(n-1)*K + a) = R(:,:,(n-1)*K*nrBS+(n-1)*K + a)*trace(Rk_nb(:,:,(n-1)*K+a,r));
-% %                 for t = 1:nrBS % For all users vs all BS
-% % 
-% %                     Rkkb(:,:,(t-1)*K*nrBS + n,r) = R(:,:,(t-1)*K*nrBS + n)*trace(Rk_b(:,:,n,r));
-% %                     Rkknb(:,:,(t-1)*K*nrBS + n,r) = R(:,:,(t-1)*K*nrBS + n)*trace(Rk_nb(:,:,n,r));
-% % 
-% %                 end
-%                 
-%             end
-%             
-%             
-%         end
-       
+        % Obtaining the beamforming vector
+        for n = 1:K*nrBS % for each user, one Ru
+            theta = rand.*pi;
+
+            Ru(:,:,n,r) = functionOneRingModel(N(na),angularSpread,theta);
+            [eigenVect(:,:,n,r),eigenVal(:,:,n,r)] = eig(Ru(:,:,n,r));
+            wb(:,n,r) = eigenVect(:,end,n,r); % Beamforming vector
+            
+            wnb(:,n,r) = ones(N(na),1)/sqrt(N(na)); % without Beamforming
+            
+            
+            % creating Rkk for each user Rkk = R*trace(Ru^(1/2)*w*w^(H)*Ru^(1/2)^H)
+            
+            Rusq = eigenVect(:,:,n,r)*sqrt(eigenVal(:,:,n,r))*ctranspose(eigenVect(:,:,n,r));% square root of Ru
+            
+
+            Rk_b(:,:,n,r) = Rusq*wb(:,n,r)*ctranspose(wb(:,n,r))*ctranspose(Rusq);
+            Rk_nb(:,:,n,r) = Rusq*wnb(:,n,r)*ctranspose(wnb(:,n,r))*ctranspose(Rusq);
+
+            for t = 1:nrBS % For all users vs all BS
+
+                Rkkb(:,:,(t-1)*K*nrBS + n,r) = R(:,:,(t-1)*K*nrBS + n)*trace(Rk_b(:,:,n,r));
+                Rkknb(:,:,(t-1)*K*nrBS + n,r) = R(:,:,(t-1)*K*nrBS + n)*trace(Rk_nb(:,:,n,r));
+                
+            end
+            
+        end
+        
         % Calculate the MSE of the given realization
         for t=1:nrBS % for each BS, calculate the MMSE estimator of the channel
 
@@ -167,3 +143,5 @@ for t = 1:nrBS
 end
 
  
+Contact GitHub API Training Shop Blog About
+© 2017 GitHub, Inc. Terms Privacy Security Status Help
