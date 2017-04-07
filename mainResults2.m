@@ -14,7 +14,7 @@ p = 10^(SNR/10); % power of the pilots for the desired SNR
 M = 100; % number of antennas at the BS
 K = 1; % Number of users per BS
 %N = [1:2:Nmax]; % Number of antennas per User
-N = [1 2 5 20 40 80];
+N = [1 4 10 20];
 Radius = 500; % Radius of the cells (in m)
 nrBS = 7; % Number of BS
 beamform = 1; % if beamform = 0, w = [1; 1;], i.e., there is no beamforming at the user
@@ -25,6 +25,12 @@ Distances = SystemPlot(nrBS,K,Radius);
 betas = 1./(Distances.^(3.8)); % loss factor
 
 %%
+angularSpread = 10; % 10�
+for i=1:nrBS*K*nrBS
+    %h(:,:,i,r) = (sqrt(2)./2)*(randn(M,N(na))+1i*randn(M,N(na)));
+    theta = rand*pi; % angle of arrival (uniformly distributed between 0 and pi)
+    R(:,:,i) = functionOneRingModel(M,angularSpread,theta);
+end
 meanMSEb = zeros(nrBS,length(N));
 meanMSEnb = zeros(nrBS,length(N));
 for na = 1:length(N)% For all the different values of antennas at the user
@@ -40,7 +46,7 @@ for na = 1:length(N)% For all the different values of antennas at the user
     Rkkb = zeros(M,M,K*nrBS,Nrealizations);
     Rkknb = zeros(M,M,K*nrBS,Nrealizations);
     gEff = zeros(M,K,Nrealizations);
-    R = zeros(M,M,nrBS*K*nrBS,Nrealizations);
+    %R = zeros(M,M,nrBS*K*nrBS,Nrealizations);
     
     for r = 1:Nrealizations
 
@@ -49,12 +55,7 @@ for na = 1:length(N)% For all the different values of antennas at the user
         % 2nd matrix in h, BS1 vs UE2 antenna 1 and 2 ...
         % for each h calculate the covariance matrix (each h is one antenna from
         % the user to eacH BS)
-        angularSpread = 10; % 10�
-        for i=1:nrBS*K*nrBS
-            h(:,:,i,r) = (sqrt(2)./2)*(randn(M,N(na))+1i*randn(M,N(na)));
-            theta = rand*pi; % angle of arrival (uniformly distributed between 0 and pi)
-            R(:,:,i,r) = functionOneRingModel(M,angularSpread,theta);
-        end
+      
 
         % Obtaining the beamforming vector
         for n = 1:K*nrBS % for each user, one Ru
@@ -77,8 +78,8 @@ for na = 1:length(N)% For all the different values of antennas at the user
 
             for t = 1:nrBS % For all users vs all BS
 
-                Rkkb(:,:,(t-1)*K*nrBS + n,r) = R(:,:,(t-1)*K*nrBS + n,r)*trace(Rk_b(:,:,n,r));
-                Rkknb(:,:,(t-1)*K*nrBS + n,r) = R(:,:,(t-1)*K*nrBS + n,r)*trace(Rk_nb(:,:,n,r));
+                Rkkb(:,:,(t-1)*K*nrBS + n,r) = R(:,:,(t-1)*K*nrBS + n)*trace(Rk_b(:,:,n,r));
+                Rkknb(:,:,(t-1)*K*nrBS + n,r) = R(:,:,(t-1)*K*nrBS + n)*trace(Rk_nb(:,:,n,r));
                 
             end
             
