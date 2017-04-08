@@ -1,7 +1,8 @@
 %% main results
 %% With one user per cell (no intercell interference since the users in the
 % same cell will use orthogonal pilots). We will see the difference between
-% the MSE of the system with and without beamforming.
+% the MSE of the system with and without beamforming, and with the optimal
+% beamforming
 
 clear all
 
@@ -19,7 +20,7 @@ N = [1 2 4 8];
 Radius = 500; % Radius of the cells (in m)
 nrBS = 7; % Number of BS
 beamform = 1; % if beamform = 0, w = [1; 1;], i.e., there is no beamforming at the user
-delta = 0.0001;
+delta = 0.001;
 % generate users (SystemPlot)
 % generate one tier (7 BS) with one user per BS. The radius of the BS is
 % 500 m
@@ -38,14 +39,24 @@ meanMSEnb = zeros(nrBS,length(N));
 for na = 1:length(N)% For all the different values of antennas at the user
     wb = zeros(N(na),K*nrBS);
     wnb = zeros(N(na),K*nrBS);
+    wopt = zeros(N(na),K*nrBS);
     Ru = zeros(N(na),N(na),nrBS*K*nrBS);
     eigenVect = zeros(N(na),N(na),K*nrBS*nrBS);
     eigenVal = zeros(N(na),N(na),K*nrBS*nrBS);
     Rk_b = zeros(N(na),N(na),K*nrBS);
     Rk_nb = zeros(N(na),N(na),K*nrBS);
+    Rk_opt = zeros(N(na),N(na),K*nrBS);
     Rkkb = zeros(M,M,K*nrBS*nrBS);
     Rkknb = zeros(M,M,K*nrBS*nrBS);
+    Rkkopt = zeros(M,M,K*nrBS*nrBS);
     gEff = zeros(M,K,Nrealizations);
+    Rusum = zeros(N(na),N(na),nrBS*K);
+    B = zeros(N(na),N(na),nrBS*K);
+    Bchol = zeros(N(na),N(na),nrBS*K);
+    BcholInv = zeros(N(na),N(na),nrBS*K);
+    Bsqrt = zeros(N(na),N(na),nrBS*K);
+    BusqrtInv = zeros(N(na),N(na),nrBS*K);
+    Rusqrt = zeros(N(na),N(na),nrBS*K*nrBS);
     
     %R = zeros(M,M,nrBS*K*nrBS,Nrealizations);
     
@@ -62,6 +73,26 @@ for na = 1:length(N)% For all the different values of antennas at the user
                 %Rusqrt(:,:,i) = V*sqrt(D)*ctranspose(V);
         end
         
+        % For the optimal beamforming
+        for i=1:nrBS*K
+            Rusum(:,:,i) = zeros(N(na),N(na));
+            for t = 1:nrBS
+                if (t ~= i) % ATENTO!!! si hay mas de un usuario, problemas aqui
+                    Rusum(:,:,i) = Rusum(:,:,i) + Ru(:,:,(t-1)*K*nrBS + i);
+                end
+                
+            end
+            B(:,:,i) = Rusum(:,:,i) + delta*eye(N(na));
+%             [V,D] = eig(B(:,:,i));
+%             Bsqrt(:,:,i) = V*sqrt(D)*ctranspose(V);
+%             BusqrtInv(:,:,i) = inv(Bsqrt(:,:,i));
+            %Cholesky factorization
+            Bchol(:,:,i) = chol(B(:,:,i)); % B = Bchol'*Bchol
+            BcholInv(:,:,i) = inv(Bchol(:,:,i));
+            
+            
+        end
+
     
         for n = 1:nrBS
 
@@ -70,6 +101,14 @@ for na = 1:length(N)% For all the different values of antennas at the user
                 wb(:,(n-1)*K+a) = eigenVect(:,end,(n-1)*K+a);
                 wnb(:,(n-1)*K+a) = ones(N(na),1)/sqrt(N(na)); % without beamforming
                 
+                % For the optimal beamforming
+                %[V,D] = eig(ctranspose(BusqrtInv(:,:,(n-1)*K+a))*Ru(:,:,(n-1)*K*nrBS+(n-1)*K + a)*BusqrtInv(:,:,(n-1)*K+a));
+                [V,D] = eig(BcholInv(:,:,(n-1)*K+a)'*Ru(:,:,(n-1)*K*nrBS+(n-1)*K + a)*BcholInv(:,:,(n-1)*K+a)); % Cholesky
+                wopt_ = V(:,end);
+                %wopt(:,(n-1)*K+a) = BusqrtInv(:,:,(n-1)*K+a)*wopt_;
+                wopt(:,(n-1)*K+a) = BcholInv(:,:,(n-1)*K+a)*wopt_; % Cholesky
+                wopt(:,(n-1)*K+a) = wopt(:,(n-1)*K+a)/norm(wopt(:,(n-1)*K+a));
+                %wopt(:,(n-1)*K+a) = wopt_;
             end
 
         end
@@ -80,9 +119,11 @@ for na = 1:length(N)% For all the different values of antennas at the user
 
                 Rk_b(:,:,(t-1)*K*nrBS+u) = Ru(:,:,(t-1)*K*nrBS+u)*wb(:,u)*ctranspose(wb(:,u));
                 Rk_nb(:,:,(t-1)*K*nrBS+u) = Ru(:,:,(t-1)*K*nrBS+u)*wnb(:,u)*ctranspose(wnb(:,u));
+                Rk_opt(:,:,(t-1)*K*nrBS+u) = Ru(:,:,(t-1)*K*nrBS+u)*wopt(:,u)*ctranspose(wopt(:,u));
 
                 Rkkb(:,:,(t-1)*K*nrBS+u) = R(:,:,(t-1)*K*nrBS+u)*trace(Rk_b(:,:,(t-1)*K*nrBS+u));
                 Rkknb(:,:,(t-1)*K*nrBS+u) = R(:,:,(t-1)*K*nrBS+u)*trace(Rk_nb(:,:,(t-1)*K*nrBS+u));
+                Rkkopt(:,:,(t-1)*K*nrBS+u) = R(:,:,(t-1)*K*nrBS+u)*trace(Rk_opt(:,:,(t-1)*K*nrBS+u));
 
             end
 
@@ -93,16 +134,20 @@ for na = 1:length(N)% For all the different values of antennas at the user
 
             Rsumb = sum(Rkkb(:,:,(t-1)*K*nrBS+1:(t-1)*K*nrBS+nrBS*K),3);
             Rsumnb = sum(Rkknb(:,:,(t-1)*K*nrBS+1:(t-1)*K*nrBS+nrBS*K),3);
+            Rsumopt = sum(Rkkopt(:,:,(t-1)*K*nrBS+1:(t-1)*K*nrBS+nrBS*K),3);
             % index = (t-1)*K*nrBS+K*(t-1)+a
             for a=1:K
                 Cb(:,:,t,a,r) = Rkkb(:,:,(t-1)*K*nrBS+K*(t-1)+a) - p*Rkkb(:,:,(t-1)*K*nrBS+K*(t-1)+a)/(p*Rsumb + eye(M))*Rkkb(:,:,(t-1)*K*nrBS+K*(t-1)+a);
                 Cnb(:,:,t,a,r) = Rkknb(:,:,(t-1)*K*nrBS+K*(t-1)+a) - p*Rkknb(:,:,(t-1)*K*nrBS+K*(t-1)+a)/(p*Rsumnb + eye(M))*Rkknb(:,:,(t-1)*K*nrBS+K*(t-1)+a);
+                Copt(:,:,t,a,r) = Rkkopt(:,:,(t-1)*K*nrBS+K*(t-1)+a) - p*Rkkopt(:,:,(t-1)*K*nrBS+K*(t-1)+a)/(p*Rsumopt + eye(M))*Rkkopt(:,:,(t-1)*K*nrBS+K*(t-1)+a);
                 
                 %gEff(:,(t-1)*K+a,r) = h(:,:,(t-1)*K*nrBS+K*(t-1)+a,r)*w(:,(t-1)*K+a,r);
                 normFactorb = trace(Rkkb(:,:,(t-1)*K*nrBS+K*(t-1)+a));
                 normFactornb = trace(Rkknb(:,:,(t-1)*K*nrBS+K*(t-1)+a));
+                normFactoropt = trace(Rkkopt(:,:,(t-1)*K*nrBS+K*(t-1)+a));
                 MSEb(t,r,a,na) = trace(Cb(:,:,t,a,r))/normFactorb;
                 MSEnb(t,r,a,na) = trace(Cnb(:,:,t,a,r))/normFactornb;
+                MSEopt(t,r,a,na) = trace(Copt(:,:,t,a,r))/normFactoropt;
             end
 
         end
@@ -116,6 +161,7 @@ for na = 1:length(N)% For all the different values of antennas at the user
                                  % users. The third dimension is the user
                                  % in the BS
         meanMSEnb(:,na,a) = mean(MSEnb(:,:,a,na),2);
+        meanMSEopt(:,na,a) = mean(MSEopt(:,:,a,na),2);
     end
     
 end
@@ -123,7 +169,7 @@ end
 %% Plotting the results
 for t = 1:nrBS
     for a = 1:K % for each user in the cell
-        plotMeanMSE(meanMSEb,meanMSEnb,0,t,a,N,2) 
+        plotMeanMSE(meanMSEb,meanMSEnb,meanMSEopt,t,a,N,3) 
     end
 end
 
