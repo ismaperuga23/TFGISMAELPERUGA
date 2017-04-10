@@ -6,7 +6,7 @@
 
 clear all
 
-Nrealizations = 1;
+Nrealizations = 100;
 Nmax = 10; % Maximum number of antennas per terminal in the simulation
 SNR = 5; % value of the fixed SNR in dB (power of noise = 1)
 
@@ -16,8 +16,7 @@ M = 100; % number of antennas at the BS
 K = 1; % Number of users per BS
 %N = [1:2:Nmax]; % Number of antennas per User
 N = [1 5 10 15 20];
-N = [1 2 4 8 20];
-N = [2 4];
+N = [1 2 4 8];
 Radius = 500; % Radius of the cells (in m)
 nrBS = 7; % Number of BS
 beamform = 1; % if beamform = 0, w = [1; 1;], i.e., there is no beamforming at the user
@@ -103,11 +102,9 @@ for na = 1:length(N)% For all the different values of antennas at the user
                 wnb(:,(n-1)*K+a) = ones(N(na),1)/sqrt(N(na)); % without beamforming
                 
                 % For the optimal beamforming
-                [V,D] = eig(BusqrtInv(:,:,(n-1)*K+a)*Ru(:,:,(n-1)*K*nrBS+(n-1)*K + a)*BusqrtInv(:,:,(n-1)*K+a));
-               %[V,D] = eig(ctranspose(BcholInv(:,:,(n-1)*K+a))*Ru(:,:,(n-1)*K*nrBS+(n-1)*K + a)*BcholInv(:,:,(n-1)*K+a)); % Cholesky
-
-                [m,I] = max(abs(diag(D)));
-                wopt_ = V(:,I);
+                %[V,D] = eig(ctranspose(BusqrtInv(:,:,(n-1)*K+a))*Ru(:,:,(n-1)*K*nrBS+(n-1)*K + a)*BusqrtInv(:,:,(n-1)*K+a));
+                [V,D] = eig(ctranspose(BcholInv(:,:,(n-1)*K+a))*Ru(:,:,(n-1)*K*nrBS+(n-1)*K + a)*BcholInv(:,:,(n-1)*K+a)); % Cholesky
+                wopt_ = V(:,end);
                 %wopt(:,(n-1)*K+a) = BusqrtInv(:,:,(n-1)*K+a)*wopt_;
                 %wopt(:,(n-1)*K+a) = BcholInv(:,:,(n-1)*K+a)*wopt_; % Cholesky
                 %wopt(:,(n-1)*K+a) = wopt(:,(n-1)*K+a)/norm(wopt(:,(n-1)*K+a));
