@@ -2,15 +2,16 @@
 %% With one user per cell (no intercell interference since the users in the
 % same cell use orthogonal pilots). We will see the difference between
 % the MSE of the system with and without beamforming, and with the optimal
-% beamforming
+% beamforming. Now we are having in account the path loss.
 
 clear all
 
 Nrealizations = 20;
 Nmax = 10; % Maximum number of antennas per terminal in the simulation
 SNR = 10; % value of the fixed SNR in dB (power of noise = 1)
+Radius = 500; % Radius of the cells (in m)
 
-p = 10^(SNR/10); % power of the pilots for the desired SNR 
+p = Radius^(3.8)*10^(SNR/10); % power of the pilots for the desired SNR at the cell edge 
 
 M = 100; % number of antennas at the BS
 K = 1; % Number of users per BS
@@ -19,14 +20,14 @@ N = [1 5 20 50];
 Radius = 500; % Radius of the cells (in m)
 nrBS = 7; % Number of BS
 beamform = 1; % if beamform = 0, w = [1; 1;], i.e., there is no beamforming at the user
-delta = 0.001;
+delta = 1/2;
 % generate users (SystemPlot)
 % generate one tier (7 BS) with one user per BS. The radius of the BS is
 % 500 m
 Distances = SystemPlot(nrBS,K,Radius);
 betas = 1./(Distances.^(3.8)); % loss factor
 sizeBeta = size(betas);
-betas = reshape(betas,[sizeBeta(1)*sizeBeta(2),1]);
+%betas = reshape(betas,[sizeBeta(1)*sizeBeta(2),1]);
 
 %%
 angularSpread = 10; % 10�
@@ -79,11 +80,12 @@ for na = 1:length(N)% For all the different values of antennas at the user
         end
         
         % For the optimal beamforming
+        delta = 1/(N(na));
         for i=1:nrBS*K
             Rusum(:,:,i) = zeros(N(na),N(na));
             for t = 1:nrBS
                 if (t ~= i) % ATENTO!!! si hay mas de un usuario, problemas aqui
-                    Rusum(:,:,i) = Rusum(:,:,i) + Ru(:,:,(t-1)*K*nrBS + i); % using betas to model the path loss
+                    Rusum(:,:,i) = Rusum(:,:,i) + p*betas(i,t)*Ru(:,:,(t-1)*K*nrBS + i); % using betas to model the path loss
                 end
                 
             end
@@ -130,9 +132,9 @@ for na = 1:length(N)% For all the different values of antennas at the user
                 Rk_opt(:,:,(t-1)*K*nrBS+u) = Ru(:,:,(t-1)*K*nrBS+u)*wopt(:,u)*ctranspose(wopt(:,u));
                 %Rk_optCHOL(:,:,(t-1)*K*nrBS+u) = Ru(:,:,(t-1)*K*nrBS+u)*woptCHOL(:,u)*ctranspose(woptCHOL(:,u));
                 
-                Rkkb(:,:,(t-1)*K*nrBS+u) = R(:,:,(t-1)*K*nrBS+u)*trace(Rk_b(:,:,(t-1)*K*nrBS+u)); % betas to model the path loss
-                Rkknb(:,:,(t-1)*K*nrBS+u) = R(:,:,(t-1)*K*nrBS+u)*trace(Rk_nb(:,:,(t-1)*K*nrBS+u));
-                Rkkopt(:,:,(t-1)*K*nrBS+u) = R(:,:,(t-1)*K*nrBS+u)*trace(Rk_opt(:,:,(t-1)*K*nrBS+u));
+                Rkkb(:,:,(t-1)*K*nrBS+u) = betas(u,t)*R(:,:,(t-1)*K*nrBS+u)*trace(Rk_b(:,:,(t-1)*K*nrBS+u)); % betas to model the path loss
+                Rkknb(:,:,(t-1)*K*nrBS+u) = betas(u,t)*R(:,:,(t-1)*K*nrBS+u)*trace(Rk_nb(:,:,(t-1)*K*nrBS+u));
+                Rkkopt(:,:,(t-1)*K*nrBS+u) = betas(u,t)*R(:,:,(t-1)*K*nrBS+u)*trace(Rk_opt(:,:,(t-1)*K*nrBS+u));
                 %RkkoptCHOL(:,:,(t-1)*K*nrBS+u) = betas(u,t)*R(:,:,(t-1)*K*nrBS+u)*trace(Rk_optCHOL(:,:,(t-1)*K*nrBS+u));
 
             end
