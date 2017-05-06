@@ -6,9 +6,9 @@
 
 clear all
 
-Nrealizations = 20;
+Nrealizations = 10;
 Nmax = 10; % Maximum number of antennas per terminal in the simulation
-SNR = 10; % value of the fixed SNR in dB (power of noise = 1)
+SNR = 0; % value of the fixed SNR in dB (power of noise = 1)
 Radius = 500; % Radius of the cells (in m)
 
 p = Radius^(3.8)*10^(SNR/10); % power of the pilots for the desired SNR at the cell edge 
@@ -174,7 +174,7 @@ for na = 1:length(N)% For all the different values of antennas at the user
             Rsumb = sum(Rkkb(:,:,(t-1)*K*nrBS+1:(t-1)*K*nrBS+nrBS*K),3);
             Rsumnb = sum(Rkknb(:,:,(t-1)*K*nrBS+1:(t-1)*K*nrBS+nrBS*K),3);
             Rsumopt = sum(Rkkopt(:,:,(t-1)*K*nrBS+1:(t-1)*K*nrBS+nrBS*K),3);
-
+        
 %             Rsumb = zeros(M,M);
 %             Rsumnb = zeros(M,M);
 %             Rsumopt = zeros(M,M);
@@ -183,42 +183,30 @@ for na = 1:length(N)% For all the different values of antennas at the user
 %                Rsumnb = Rsumnb + betas(u,t)*Rkknb(:,:,(t-1)*K*nrBS+u);
 %                Rsumopt = Rsumopt + betas(u,t)*Rkkopt(:,:,(t-1)*K*nrBS+u);
 %             end
-            RsumoptCHOL = sum(RkkoptCHOL(:,:,(t-1)*K*nrBS+1:(t-1)*K*nrBS+nrBS*K),3);
+            %RsumoptCHOL = sum(RkkoptCHOL(:,:,(t-1)*K*nrBS+1:(t-1)*K*nrBS+nrBS*K),3);
             % index = (t-1)*K*nrBS+K*(t-1)+a
             for a=1:K
                 Cb(:,:,t,a,r) = Rkkb(:,:,(t-1)*K*nrBS+K*(t-1)+a) - p*Rkkb(:,:,(t-1)*K*nrBS+K*(t-1)+a)/(p*Rsumb + eye(M))*Rkkb(:,:,(t-1)*K*nrBS+K*(t-1)+a);
                 Cnb(:,:,t,a,r) = Rkknb(:,:,(t-1)*K*nrBS+K*(t-1)+a) - p*Rkknb(:,:,(t-1)*K*nrBS+K*(t-1)+a)/(p*Rsumnb + eye(M))*Rkknb(:,:,(t-1)*K*nrBS+K*(t-1)+a);
                 Copt(:,:,t,a,r) = Rkkopt(:,:,(t-1)*K*nrBS+K*(t-1)+a) - p*Rkkopt(:,:,(t-1)*K*nrBS+K*(t-1)+a)/(p*Rsumopt + eye(M))*Rkkopt(:,:,(t-1)*K*nrBS+K*(t-1)+a);
-                CoptCHOL(:,:,t,a,r) = RkkoptCHOL(:,:,(t-1)*K*nrBS+K*(t-1)+a) - p*RkkoptCHOL(:,:,(t-1)*K*nrBS+K*(t-1)+a)/(p*RsumoptCHOL + eye(M))*RkkoptCHOL(:,:,(t-1)*K*nrBS+K*(t-1)+a);
+                %CoptCHOL(:,:,t,a,r) = RkkoptCHOL(:,:,(t-1)*K*nrBS+K*(t-1)+a) - p*RkkoptCHOL(:,:,(t-1)*K*nrBS+K*(t-1)+a)/(p*RsumoptCHOL + eye(M))*RkkoptCHOL(:,:,(t-1)*K*nrBS+K*(t-1)+a);
 
                 %gEff(:,(t-1)*K+a,r) = h(:,:,(t-1)*K*nrBS+K*(t-1)+a,r)*w(:,(t-1)*K+a,r);
                 normFactorb = trace(Rkkb(:,:,(t-1)*K*nrBS+K*(t-1)+a));
                 normFactornb = trace(Rkknb(:,:,(t-1)*K*nrBS+K*(t-1)+a));
                 normFactoropt = trace(Rkkopt(:,:,(t-1)*K*nrBS+K*(t-1)+a));
-                normFactoroptCHOL = trace(RkkoptCHOL(:,:,(t-1)*K*nrBS+K*(t-1)+a));
+                %normFactoroptCHOL = trace(RkkoptCHOL(:,:,(t-1)*K*nrBS+K*(t-1)+a));
 
                 MSEb(t,r,a,na) = trace(Cb(:,:,t,a,r))/normFactorb;
                 MSEnb(t,r,a,na) = trace(Cnb(:,:,t,a,r))/normFactornb;
                 MSEopt(t,r,a,na) = trace(Copt(:,:,t,a,r))/normFactoropt;
-                MSEoptCHOL(t,r,a,na) = trace(CoptCHOL(:,:,t,a,r))/normFactoroptCHOL;
+                %MSEoptCHOL(t,r,a,na) = trace(CoptCHOL(:,:,t,a,r))/normFactoroptCHOL;
                 
-                TMSEnb(r,na) = TMSEnb(r,na) + trace(Rkknb(:,:,(t-1)*K*nrBS+K*(t-1)+a) - p*Rkknb(:,:,(t-1)*K*nrBS+K*(t-1)+a)*inv(Rsumnb*p+eye(M))*Rkknb(:,:,(t-1)*K*nrBS+K*(t-1)+a));
-                TMSEb(r,na) = TMSEb(r,na) + trace(Rkkb(:,:,(t-1)*K*nrBS+K*(t-1)+a) - p*Rkkb(:,:,(t-1)*K*nrBS+K*(t-1)+a)*inv(Rsumb*p+eye(M))*Rkkb(:,:,(t-1)*K*nrBS+K*(t-1)+a));
-                TMSEopt(r,na) = TMSEopt(r,na) + trace(Rkkopt(:,:,(t-1)*K*nrBS+K*(t-1)+a) - p*Rkkopt(:,:,(t-1)*K*nrBS+K*(t-1)+a)*inv(Rsumopt*p+eye(M))*Rkkopt(:,:,(t-1)*K*nrBS+K*(t-1)+a));
-                TMSEopt2(r,na) = TMSEopt2(r,na) + trace(RkkoptCHOL(:,:,(t-1)*K*nrBS+K*(t-1)+a) - p*RkkoptCHOL(:,:,(t-1)*K*nrBS+K*(t-1)+a)*inv(RsumoptCHOL*p+eye(M))*RkkoptCHOL(:,:,(t-1)*K*nrBS+K*(t-1)+a));
+            
             end
 
         end
-        
-        normFactorb = trace(Rsumb);
-        normFactornb = trace(Rsumnb);
-        normFactoropt = trace(Rsumopt);
-        normFactoropt2 = trace(RsumoptCHOL);
-        
-        TMSEnb = TMSEnb/normFactornb;
-        TMSEb = TMSEb/normFactorb;
-        TMSEopt = TMSEopt/normFactoropt;
-        TMSEopt2 = TMSEopt2/normFactoropt2;
+
     end
     
     for a = 1:K
@@ -229,7 +217,7 @@ for na = 1:length(N)% For all the different values of antennas at the user
                                  % in the BS
         meanMSEnb(:,na,a) = mean(MSEnb(:,:,a,na),2);
         meanMSEopt(:,na,a) = mean(MSEopt(:,:,a,na),2);
-        meanMSEoptCHOL(:,na,a) = mean(MSEoptCHOL(:,:,a,na),2);
+        %meanMSEoptCHOL(:,na,a) = mean(MSEoptCHOL(:,:,a,na),2);
     end
     
 end
