@@ -10,7 +10,7 @@
 
 clear all
 
-Nrealizations = 250;
+Nrealizations = 15;
 Nmax = 20; % Maximum number of antennas per terminal in the simulation
 SNR = 5; % value of the fixed SNR in dB (power of noise = 1)
 SNR = linspace(-5,20,20);
@@ -20,7 +20,7 @@ p = Radius^(3.8)*10.^(SNR/10); % power of the pilots for the desired SNR at the 
 
 M = 100; % number of antennas at the BS
 K = 1; % Number of users per BS
-N = 2;
+N = 4;
 Radius = 500; % Radius of the cells (in m)
 nrBS = 7; % Number of BS
 beamform = 1; % if beamform = 0, w = [1; 1;], i.e., there is no beamforming at the user
@@ -48,16 +48,16 @@ end
 %     R(:,:,i) = eye(M);
 % end
 %%
-meanMSEb = zeros(nrBS,length(N));
-meanMSEnb = zeros(nrBS,length(N));
-meanMSEopt = zeros(nrBS,length(N));
+meanMSEb = zeros(nrBS,length(p));
+meanMSEnb = zeros(nrBS,length(p));
+meanMSEopt = zeros(nrBS,length(p));
 
-meanMSEoptCHOL = zeros(nrBS,length(N));
+meanMSEoptCHOL = zeros(nrBS,length(p));
 
-TMSEnb = zeros(Nrealizations,length(N));
-TMSEb = zeros(Nrealizations,length(N));
-TMSEopt = zeros(Nrealizations,length(N));
-TMSEopt2 = zeros(Nrealizations,length(N));
+TMSEnb = zeros(Nrealizations,length(p));
+TMSEb = zeros(Nrealizations,length(p));
+TMSEopt = zeros(Nrealizations,length(p));
+TMSEopt2 = zeros(Nrealizations,length(p));
 for na = 1:length(p)% For all the different values of antennas at the user
     wb = zeros(N,K*nrBS);
     wnb = zeros(N,K*nrBS);
@@ -110,7 +110,7 @@ for na = 1:length(p)% For all the different values of antennas at the user
             Rusum(:,:,i) = zeros(N,N);
             for t = 1:nrBS
                 if (t ~= i) % ATENTO!!! si hay mas de un usuario, problemas aqui
-                    Rusum(:,:,i) = Rusum(:,:,i) + p*betas(i,t)*Ru(:,:,(t-1)*K*nrBS + i); % using betas to model the path loss
+                    Rusum(:,:,i) = Rusum(:,:,i) + p(na)*betas(i,t)*Ru(:,:,(t-1)*K*nrBS + i); % using betas to model the path loss
                 end
                 
             end
@@ -256,13 +256,13 @@ TMSEopt = mean(TMSEopt);
 figure;
 grid on
 hold on
-plot(N,10*log10(real(TMSEnb)));
-plot(N,10*log10(real(TMSEb)));
-plot(N,10*log10(real(TMSEopt)));
+plot(SNR,10*log10(real(TMSEnb)));
+plot(SNR,10*log10(real(TMSEb)));
+plot(SNR,10*log10(real(TMSEopt)));
 
 legend('Without Beamforming', 'Max. SNR beamforming', 'Max. SLNR beamforming')
 
-xlabel('N (Antennas at terminals)')
+xlabel('SNR (dB)')
 ylabel('MSE(dB)')
 title(['TOTAL NMSE OF THE NETWORK']);
 
