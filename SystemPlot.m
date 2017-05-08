@@ -67,7 +67,7 @@ for l = 1:nbrBSs
     
 end
 Distance=distancesSquaredBSj;
-
+% 
 % %Plot the system
 % figure;
 % plot(real(BSpositionsWrapped),imag(BSpositionsWrapped),'b+');

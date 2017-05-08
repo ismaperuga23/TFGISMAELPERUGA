@@ -4,14 +4,15 @@
 % the MSE of the system with and without beamforming, and with the optimal
 % beamforming. Now we are having in account the path loss.
 
-%% In mainResults5, the total MSE is calculated for the whole network, not 
-% only for each cell
+%% In mainResults5A, the total MSE is calculated for the whole network, not 
+% only for each cell. We compare the TNMSE keeping the UE position fixed
+% and only changing the correlation matrices at the UE side.
 
 clear all
 
-Nrealizations = 1;
-Nmax = 19; % Maximum number of antennas per terminal in the simulation
-SNR = -5; % value of the fixed SNR in dB (power of noise = 1)
+Nrealizations = 250;
+Nmax = 20; % Maximum number of antennas per terminal in the simulation
+SNR = 5; % value of the fixed SNR in dB (power of noise = 1)
 Radius = 500; % Radius of the cells (in m)
 
 p = Radius^(3.8)*10^(SNR/10); % power of the pilots for the desired SNR at the cell edge 
@@ -19,9 +20,7 @@ p = Radius^(3.8)*10^(SNR/10); % power of the pilots for the desired SNR at the c
 M = 100; % number of antennas at the BS
 K = 1; % Number of users per BS
 %N = [1:2:Nmax]; % Number of antennas per User
-N = linspace(1,Nmax,Nmax/2);
-N = [1 3 5 7 9 11 13 15 17 19];
-N=1;
+N = linspace(1,Nmax,Nmax);
 Radius = 500; % Radius of the cells (in m)
 nrBS = 7; % Number of BS
 beamform = 1; % if beamform = 0, w = [1; 1;], i.e., there is no beamforming at the user
@@ -43,11 +42,11 @@ for i=1:nrBS*K*nrBS
     R(:,:,i) = functionOneRingModel(M,angularSpread,theta);
 end
 %%
-for i=1:nrBS*K*nrBS
-    %h(:,:,i,r) = (sqrt(2)./2)*(randn(M,N(na))+1i*randn(M,N(na)));
-    theta = rand*pi; % angle of arrival (uniformly distributed between 0 and pi)
-    R(:,:,i) = eye(M);
-end
+% for i=1:nrBS*K*nrBS
+%     %h(:,:,i,r) = (sqrt(2)./2)*(randn(M,N(na))+1i*randn(M,N(na)));
+%     theta = rand*pi; % angle of arrival (uniformly distributed between 0 and pi)
+%     R(:,:,i) = eye(M);
+% end
 %%
 meanMSEb = zeros(nrBS,length(N));
 meanMSEnb = zeros(nrBS,length(N));
@@ -205,6 +204,7 @@ for na = 1:length(N)% For all the different values of antennas at the user
             %RsumoptCHOL = sum(RkkoptCHOL(:,:,(t-1)*K*nrBS+1:(t-1)*K*nrBS+nrBS*K),3);
             % index = (t-1)*K*nrBS+K*(t-1)+a
             for a=1:K
+                % For the total NMSE
                 Cb(:,:,t,a,r) = Rkkb(:,:,(t-1)*K*nrBS+K*(t-1)+a) - p*Rkkb(:,:,(t-1)*K*nrBS+K*(t-1)+a)/(p*Rsumb + eye(M))*Rkkb(:,:,(t-1)*K*nrBS+K*(t-1)+a);
                 Cnb(:,:,t,a,r) = Rkknb(:,:,(t-1)*K*nrBS+K*(t-1)+a) - p*Rkknb(:,:,(t-1)*K*nrBS+K*(t-1)+a)/(p*Rsumnb + eye(M))*Rkknb(:,:,(t-1)*K*nrBS+K*(t-1)+a);
                 Copt(:,:,t,a,r) = Rkkopt(:,:,(t-1)*K*nrBS+K*(t-1)+a) - p*Rkkopt(:,:,(t-1)*K*nrBS+K*(t-1)+a)/(p*Rsumopt + eye(M))*Rkkopt(:,:,(t-1)*K*nrBS+K*(t-1)+a);
@@ -213,7 +213,15 @@ for na = 1:length(N)% For all the different values of antennas at the user
                 TMSEb(r,na) = TMSEb(r,na) + trace(Cb(:,:,t,a,r));
                 TMSEopt(r,na) = TMSEopt(r,na) + trace(Copt(:,:,t,a,r));
                 
+                % For each BS, CALCULATE THE NMSE
+                normFactorb = trace(Rkkb(:,:,(t-1)*K*nrBS+K*(t-1)+a));
+                normFactornb = trace(Rkknb(:,:,(t-1)*K*nrBS+K*(t-1)+a));
+                normFactoropt = trace(Rkkopt(:,:,(t-1)*K*nrBS+K*(t-1)+a));
                 
+
+                MSEb(t,r,a,na) = trace(Cb(:,:,t,a,r))/normFactorb;
+                MSEnb(t,r,a,na) = trace(Cnb(:,:,t,a,r))/normFactornb;
+                MSEopt(t,r,a,na) = trace(Copt(:,:,t,a,r))/normFactoropt;
             end
 
         end
@@ -225,19 +233,18 @@ for na = 1:length(N)% For all the different values of antennas at the user
         TMSEnb(r,na) = TMSEnb(r,na)/normFactornbTot;
         TMSEb(r,na) = TMSEb(r,na)/normFactorbTot;
         TMSEopt(r,na) = TMSEopt(r,na)/normFactoroptTot;
-        %TMSEopt2 = TMSEopt2/normFactoropt2;
     end
     
-%     for a = 1:K
-%         meanMSEb(:,na,a) = mean(MSEb(:,:,a,na),2); % each row is the mean MSE of a BS
-%                                  % each column is the mean MSE for a
-%                                  % different number of antennas at the
-%                                  % users. The third dimension is the user
-%                                  % in the BS
-%         meanMSEnb(:,na,a) = mean(MSEnb(:,:,a,na),2);
-%         meanMSEopt(:,na,a) = mean(MSEopt(:,:,a,na),2);
-%         %meanMSEoptCHOL(:,na,a) = mean(MSEoptCHOL(:,:,a,na),2);
-%     end
+    for a = 1:K
+        meanMSEb(:,na,a) = mean(MSEb(:,:,a,na),2); % each row is the mean MSE of a BS
+                                 % each column is the mean MSE for a
+                                 % different number of antennas at the
+                                 % users. The third dimension is the user
+                                 % in the BS
+        meanMSEnb(:,na,a) = mean(MSEnb(:,:,a,na),2);
+        meanMSEopt(:,na,a) = mean(MSEopt(:,:,a,na),2);
+        %meanMSEoptCHOL(:,na,a) = mean(MSEoptCHOL(:,:,a,na),2);
+    end
     
 end
 

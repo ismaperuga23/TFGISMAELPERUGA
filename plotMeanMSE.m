@@ -8,14 +8,15 @@ function plotMeanMSE(meanMSEb,meanMSEnb,meanMSEopt,meanMSEoptCHOL,BS,user, N, be
 if beamform == 3
     figure;
     hold on
-    plot(N,10*log10(real(meanMSEb(BS,:,user))));
-    plot(N,10*log10(real(meanMSEnb(BS,:,user))));
-    plot(N,10*log10(real(meanMSEopt(BS,:,user))));
-    plot(N,10*log10(real(meanMSEoptCHOL(BS,:,user))));
+    grid on
+    plot(N,10*log10(real(meanMSEb(BS,:,user))),'-+');
+    plot(N,10*log10(real(meanMSEnb(BS,:,user))),'-o');
+    plot(N,10*log10(real(meanMSEopt(BS,:,user))),'-*');
+    %plot(N,10*log10(real(meanMSEoptCHOL(BS,:,user))));
     xlabel('N (Antennas at terminals)')
     ylabel('MSE(dB)')
     title(['MSE of BS ',num2str(BS)]);
-    legend('MSE with beamforming', 'MSE without beamforming', 'MSE optimal beamforming delta = 1/N', 'MSE optimal beamforming delta = 1');
+    legend('MSE max. SNR beamforming', 'MSE without beamforming', 'MSE max. SLNR beamforming');
     else if beamform == 2
         figure;
         hold on
