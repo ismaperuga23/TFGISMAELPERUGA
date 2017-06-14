@@ -6,8 +6,7 @@
 
 clear all
 
-Nrealizations = 20;
-Nmax = 20; % Maximum number of antennas per terminal in the simulation
+Nrealizations = 1;
 SNR = 5; % value of the fixed SNR in dB (power of noise = 1)
 Radius = 500; % Radius of the cells (in m)
 
@@ -15,9 +14,7 @@ p = Radius^(3.8)*10^(SNR/10); % power of the pilots for the desired SNR at the c
 
 M = 100; % number of antennas at the BS
 K = 1; % Number of users per BS
-%N = [1:2:Nmax]; % Number of antennas per User
-N = linspace(1,Nmax,Nmax);
-N = 4;
+N = 8;
 Radius = 500; % Radius of the cells (in m)
 nrBS = 2; % Number of BS
 beamform = 1; % if beamform = 0, w = [1; 1;], i.e., there is no beamforming at the user
@@ -29,21 +26,32 @@ Distances = [300 600; 600 300]; % vector of distances for the UEs
 
 betas = 1./(Distances.^(3.8)); % loss factor
 sizeBeta = size(betas);
-%betas = reshape(betas,[sizeBeta(1)*sizeBeta(2),1]);
 
 angularSpread = 10; % 10�
+%theta2 = rand(6,1)*pi;
+%save('thetaVect.mat','theta2');
+theta2 = load('thetaVect.mat');
 
 %% Creating the Rb matrix for the UE1
-theta = pi/2; 
+% Rb matrix from user 1 to BS 1
+theta = pi/3; 
 Rb(:,:,1) = functionOneRingModel(M,angularSpread,theta);
 % Rb matrix from user 1 to BS 2
-Rb(:,:,3) = functionOneRingModel(M,angularSpread,rand*pi);
+Rb(:,:,3) = functionOneRingModel(M,angularSpread,theta2.theta2(1));
 %Ru matrix for user 1 vs BS 1
-Ru(:,:,1) = functionOneRingModel(N,angularSpread,rand*pi);
+Ru(:,:,1) = functionOneRingModel(N,angularSpread,theta2.theta2(2));
 % Ru matrix from user 1 vs BS 2
-Ru(:,:,3) = functionOneRingModel(N,angularSpread,rand*pi);
+Ru(:,:,3) = functionOneRingModel(N,angularSpread,theta2.theta2(3));
 
-theta21 = linspace(0,pi,Nrealizations);% Vector of AoA for the second user
+ % Rb matrix from user 2 to BS 2
+Rb(:,:,4) = functionOneRingModel(M,angularSpread,theta2.theta2(4));
+%Ru matrix of user 2 vs BS 1
+Ru(:,:,2) = functionOneRingModel(N,angularSpread,theta2.theta2(5));
+% Ru matrix from user 2 vs BS 2
+Ru(:,:,4) = functionOneRingModel(N,angularSpread,theta2.theta2(6));
+%%
+
+theta21 = linspace(0,pi,250);% Vector of AoA for the second user
 
 RbTot = zeros(M,M,Nrealizations);
 RnbTot = zeros(M,M,Nrealizations);
@@ -56,12 +64,7 @@ for na = 1:length(theta21)
     for r = 1:Nrealizations
         % Rb matrix from user 2 to BS 1
         Rb(:,:,2) = functionOneRingModel(M,angularSpread,theta21(na));
-        % Rb matrix from user 2 to BS 2
-        Rb(:,:,4) = functionOneRingModel(M,angularSpread,rand*pi);
-        %Ru matrix of user 2 vs BS 1
-        Ru(:,:,2) = functionOneRingModel(N,angularSpread,randn*pi);
-        % Ru matrix from user 2 vs BS 2
-        Ru(:,:,4) = functionOneRingModel(N,angularSpread,randn*pi);
+       
 
 
         for i=1:2
@@ -149,18 +152,45 @@ end
 figure;
 hold on
 grid on
-plot((theta21-theta)*180/pi,10*log10(real(meanMSEnb(1,:,1))));
-plot((theta21-theta)*180/pi,10*log10(real(meanMSEb(1,:,1))));
-plot((theta21-theta)*180/pi,10*log10(real(meanMSEopt(1,:,1))));
+plot((theta21)*180/pi,10*log10(real(meanMSEnb(1,:,1))),'-o');
+plot((theta21)*180/pi,10*log10(real(meanMSEb(1,:,1))),'-+');
+plot((theta21)*180/pi,10*log10(real(meanMSEopt(1,:,1))),'-*');
 
 
 legend('Without Beamforming', 'Max. SNR beamforming', 'Max. SLNR beamforming')
 
-xlabel('AoA difference (degrees)')
+xlabel('AoA of UE 2 IN BS 1')
 ylabel('MSE(dB)')
-title(['TOTAL NMSE OF THE NETWORK']);
+title(['MSE AT BS 1 WITH ' num2str(N) ' ANTENNA AT UE']);
 %% 
 %%
+%%
+
+load('D4.mat');
+%%
+
+figure;
+hold on
+grid on
+plot((theta21)*180/pi,10*log10(real(meanMSEnb(1,:,1))),'-o');
+plot((theta21)*180/pi,10*log10(real(meanMSEb(1,:,1))),'-+');
+plot((theta21)*180/pi,10*log10(real(meanMSEopt(1,:,1))),'-*');
+
+plot((theta21)*180/pi,10*log10(real(mnb4)),'-o');
+plot((theta21)*180/pi,10*log10(real(mb4)),'-+');
+plot((theta21)*180/pi,10*log10(real(mopt4)),'-*');
+
+legend('Without Beamforming', 'Max. SNR beamforming', 'Max. SLNR beamforming')
+
+xlabel('AoA of UE 2 IN BS 1')
+ylabel('MSE(dB)')
+title(['MSE AT BS 1 WITH ' num2str(N) ' ANTENNA AT UE']);
+%%
+
+
+mnb4 = meanMSEnb(1,:,1);
+mb4 = meanMSEb(1,:,1);
+mopt4 = meanMSEopt(1,:,1);
 %%
 %%
 %%

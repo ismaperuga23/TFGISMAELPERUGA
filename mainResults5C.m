@@ -4,23 +4,23 @@
 % the MSE of the system with and without beamforming, and with the optimal
 % beamforming. Now we are having in account the path loss.
 
-%% In mainResults5A, the total MSE is calculated for the whole network, not 
+%% In mainResults5C, the total MSE is calculated for the whole network, not 
 % only for each cell. We compare the TNMSE depending on the SNR for a fixed
-% number of antennas
+% number of antennas changing the UE position for each realization
 
-clear all
+%clear all
 
-Nrealizations = 15;
-Nmax = 20; % Maximum number of antennas per terminal in the simulation
+Nrealizations = 1000;
+Nmax = 16; % Maximum number of antennas per terminal in the simulation
 SNR = 5; % value of the fixed SNR in dB (power of noise = 1)
-SNR = linspace(-5,20,20);
+SNR = linspace(-5,5,16);
 Radius = 500; % Radius of the cells (in m)
 
 p = Radius^(3.8)*10.^(SNR/10); % power of the pilots for the desired SNR at the cell edge 
 
 M = 100; % number of antennas at the BS
 K = 1; % Number of users per BS
-N = 4;
+N = 8;
 Radius = 500; % Radius of the cells (in m)
 nrBS = 7; % Number of BS
 beamform = 1; % if beamform = 0, w = [1; 1;], i.e., there is no beamforming at the user
@@ -37,16 +37,9 @@ angularSpread = 10; % 10�
 %%
 
 for i=1:nrBS*K*nrBS
-    %h(:,:,i,r) = (sqrt(2)./2)*(randn(M,N)+1i*randn(M,N));
     theta = rand*pi; % angle of arrival (uniformly distributed between 0 and pi)
     R(:,:,i) = functionOneRingModel(M,angularSpread,theta);
 end
-%%
-% for i=1:nrBS*K*nrBS
-%     %h(:,:,i,r) = (sqrt(2)./2)*(randn(M,N)+1i*randn(M,N));
-%     theta = rand*pi; % angle of arrival (uniformly distributed between 0 and pi)
-%     R(:,:,i) = eye(M);
-% end
 %%
 meanMSEb = zeros(nrBS,length(p));
 meanMSEnb = zeros(nrBS,length(p));
@@ -85,48 +78,34 @@ for na = 1:length(p)% For all the different values of antennas at the user
     Bsqrt2 = zeros(N,N,nrBS*K);
 
     Rusqrt = zeros(N,N,nrBS*K*nrBS);
-    
-    %R = zeros(M,M,nrBS*K*nrBS,Nrealizations);
-   
+       
     RbTot = zeros(M,M,Nrealizations);
     RnbTot = zeros(M,M,Nrealizations);
     RoptTot = zeros(M,M,Nrealizations);
     
     for r = 1:Nrealizations
-
+        Distances = SystemPlot(nrBS,K,Radius);
+        betas = 1./(Distances.^(3.8)); % loss factor
+        
         for i = 1:nrBS*K*nrBS % Each user has different Ru for each BS
                 theta = rand*pi; % angle of arrival (uniformly distributed between 0 and pi)
                 Ru(:,:,i) = functionOneRingModel(N,angularSpread,theta);
-
-                %[V,D] = eig(Ru(:,:,i));
-
-                %Rusqrt(:,:,i) = V*sqrt(D)*ctranspose(V);
         end
         
         % For the optimal beamforming
         delta = 1;
-        %delta2 = 1;
         for i=1:nrBS*K
             Rusum(:,:,i) = zeros(N,N);
             for t = 1:nrBS
-                if (t ~= i) % ATENTO!!! si hay mas de un usuario, problemas aqui
+                if (t ~= i) 
                     Rusum(:,:,i) = Rusum(:,:,i) + p(na)*betas(i,t)*Ru(:,:,(t-1)*K*nrBS + i); % using betas to model the path loss
                 end
                 
             end
             B(:,:,i) = Rusum(:,:,i) + delta*eye(N);
-         %   B2(:,:,i) = Rusum(:,:,i) + delta2*eye(N);
             [V,D] = eig(B(:,:,i));
             Bsqrt(:,:,i) = V*sqrt(D)*ctranspose(V);
             BusqrtInv(:,:,i) = inv(Bsqrt(:,:,i));
-            
-            %[V,D] = eig(B2(:,:,i));
-            %Bsqrt2(:,:,i) = V*sqrt(D)*ctranspose(V);
-            %BusqrtInv2(:,:,i) = inv(Bsqrt2(:,:,i));
-            
-            %Cholesky factorization
-            %Bchol(:,:,i) = chol(B(:,:,i)); % B = Bchol'*Bchol
-            %BcholInv(:,:,i) = inv(Bchol(:,:,i));
             
             
         end
@@ -141,22 +120,11 @@ for na = 1:length(p)% For all the different values of antennas at the user
                 
                 % For the optimal beamforming
                 [V,D] = eig(BusqrtInv(:,:,(n-1)*K+a)*Ru(:,:,(n-1)*K*nrBS+(n-1)*K + a)*BusqrtInv(:,:,(n-1)*K+a));
-                %[VCHOL,DCHOL] = eig(ctranspose(BcholInv(:,:,(n-1)*K+a))*Ru(:,:,(n-1)*K*nrBS+(n-1)*K + a)*BcholInv(:,:,(n-1)*K+a)); % Cholesky
 
                 [m,I] = max(abs(diag(D)));
                 wopt_ = V(:,I);
-                %wopt_CHOL = VCHOL(:,I);
                 wopt(:,(n-1)*K+a) = BusqrtInv(:,:,(n-1)*K+a)*wopt_;
-                %woptCHOL(:,(n-1)*K+a) = BcholInv(:,:,(n-1)*K+a)*wopt_CHOL; % Cholesky
                 wopt(:,(n-1)*K+a) = wopt(:,(n-1)*K+a)/norm(wopt(:,(n-1)*K+a));
-                %woptCHOL(:,(n-1)*K+a) = woptCHOL(:,(n-1)*K+a)/norm(woptCHOL(:,(n-1)*K+a));
-            
-                %[V,D] = eig(BusqrtInv2(:,:,(n-1)*K+a)*Ru(:,:,(n-1)*K*nrBS+(n-1)*K + a)*BusqrtInv2(:,:,(n-1)*K+a));
-                %[m,I] = max(abs(diag(D)));
-                %wopt_ = V(:,I);
-                %wopt2(:,(n-1)*K+a) = BusqrtInv2(:,:,(n-1)*K+a)*wopt_;
-                %wopt2(:,(n-1)*K+a) = wopt2(:,(n-1)*K+a)/norm(wopt2(:,(n-1)*K+a));
-                
                 
             end
 
@@ -169,12 +137,10 @@ for na = 1:length(p)% For all the different values of antennas at the user
                 Rk_b(:,:,(t-1)*K*nrBS+u) = Ru(:,:,(t-1)*K*nrBS+u)*wb(:,u)*ctranspose(wb(:,u));
                 Rk_nb(:,:,(t-1)*K*nrBS+u) = Ru(:,:,(t-1)*K*nrBS+u)*wnb(:,u)*ctranspose(wnb(:,u));
                 Rk_opt(:,:,(t-1)*K*nrBS+u) = Ru(:,:,(t-1)*K*nrBS+u)*wopt(:,u)*ctranspose(wopt(:,u));
-                %Rk_optCHOL(:,:,(t-1)*K*nrBS+u) = Ru(:,:,(t-1)*K*nrBS+u)*wopt2(:,u)*ctranspose(wopt2(:,u));
                 
                 Rkkb(:,:,(t-1)*K*nrBS+u) = betas(u,t)*R(:,:,(t-1)*K*nrBS+u)*trace(Rk_b(:,:,(t-1)*K*nrBS+u)); % betas to model the path loss
                 Rkknb(:,:,(t-1)*K*nrBS+u) = betas(u,t)*R(:,:,(t-1)*K*nrBS+u)*trace(Rk_nb(:,:,(t-1)*K*nrBS+u));
                 Rkkopt(:,:,(t-1)*K*nrBS+u) = betas(u,t)*R(:,:,(t-1)*K*nrBS+u)*trace(Rk_opt(:,:,(t-1)*K*nrBS+u));
-                %RkkoptCHOL(:,:,(t-1)*K*nrBS+u) = betas(u,t)*R(:,:,(t-1)*K*nrBS+u)*trace(Rk_optCHOL(:,:,(t-1)*K*nrBS+u));
 
             end
 
@@ -193,16 +159,6 @@ for na = 1:length(p)% For all the different values of antennas at the user
             RnbTot(:,:,r) = RnbTot(:,:,r) + Rkknb(:,:,(t-1)*nrBS + t);
             RoptTot(:,:,r) = RoptTot(:,:,r) + Rkkopt(:,:,(t-1)*nrBS + t);
 
-%             Rsumb = zeros(M,M);
-%             Rsumnb = zeros(M,M);
-%             Rsumopt = zeros(M,M);
-%             for u = 1:nrBS*K
-%                Rsumb = Rsumb + betas(u,t)*Rkkb(:,:,(t-1)*K*nrBS+u);
-%                Rsumnb = Rsumnb + betas(u,t)*Rkknb(:,:,(t-1)*K*nrBS+u);
-%                Rsumopt = Rsumopt + betas(u,t)*Rkkopt(:,:,(t-1)*K*nrBS+u);
-%             end
-            %RsumoptCHOL = sum(RkkoptCHOL(:,:,(t-1)*K*nrBS+1:(t-1)*K*nrBS+nrBS*K),3);
-            % index = (t-1)*K*nrBS+K*(t-1)+a
             for a=1:K
                 % For the total NMSE
                 Cb(:,:,t,a,r) = Rkkb(:,:,(t-1)*K*nrBS+K*(t-1)+a) - p(na)*Rkkb(:,:,(t-1)*K*nrBS+K*(t-1)+a)/(p(na)*Rsumb + eye(M))*Rkkb(:,:,(t-1)*K*nrBS+K*(t-1)+a);
@@ -251,20 +207,28 @@ end
 TMSEnb = mean(TMSEnb);
 TMSEb = mean(TMSEb);
 TMSEopt = mean(TMSEopt);
-%% 
+%%
+nrBS = 7;
+TMSEb2 = sum(meanMSEb)/nrBS;
+TMSEnb2 = sum(meanMSEnb)/nrBS;
+TMSEopt2 = sum(meanMSEopt)/nrBS;
+%N = linspace(1,16,16);
+N = 8;
+%%
+
 
 figure;
 grid on
 hold on
-plot(SNR,10*log10(real(TMSEnb)));
-plot(SNR,10*log10(real(TMSEb)));
-plot(SNR,10*log10(real(TMSEopt)));
+plot(SNR,10*log10(real(TMSEnb)),'-o');
+plot(SNR,10*log10(real(TMSEb)),'-+');
+plot(SNR,10*log10(real(TMSEopt)),'-*');
 
 legend('Without Beamforming', 'Max. SNR beamforming', 'Max. SLNR beamforming')
 
 xlabel('SNR (dB)')
-ylabel('MSE(dB)')
-title(['TOTAL NMSE OF THE NETWORK']);
+ylabel('AMSE(dB)')
+title(['ANMSE OF THE NETWORK WITH ' num2str(N) ' ANTENNAS AT THE UE']);
 
 %% 
  
